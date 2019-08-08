@@ -1956,19 +1956,10 @@ OCTET_STRING_encode_aper(const asn_TYPE_descriptor_t *td,
 		        ret = aper_put_length(po, csiz->upper_bound - csiz->lower_bound + 1, sizeinunits - csiz->lower_bound);
 		        if(ret) ASN__ENCODE_FAILED;
 		}
-		/* EB MOD
-                   AFAIU if lb != ub it is aligned whatever the number of bits */
-#if 0
 		if (st->size > 2) { /* X.691 #16 NOTE 1 */
 			if (aper_put_align(po) < 0)
 				ASN__ENCODE_FAILED;
 		}
-#else	
-		if ((st->size > 2) || (csiz->lower_bound != csiz->upper_bound)) { /* X.691 #16.11 */
-			if (aper_put_align(po) < 0)
-				ASN__ENCODE_FAILED;
-		}	
-#endif 
 		if(bpc) {
 			ret = OCTET_STRING_per_put_characters(po, st->buf,
 				sizeinunits, bpc, unit_bits,
