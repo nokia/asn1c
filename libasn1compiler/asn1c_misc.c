@@ -262,14 +262,14 @@ asn1c_type_name(arg_t *arg, asn1p_expr_t *expr, enum tnfmt _format) {
                 || asn1c_REAL_fits(arg, expr) != RL_NOTFIT))
            || asn1c_type_fits_long(arg, expr)) {
             switch(_format) {
-			case TNF_CONSTYPE:
-				if(expr->expr_type == ASN_BASIC_REAL) {
-                    return "double";
-                } else if(asn1c_type_fits_long(arg, expr) == FL_FITS_UNSIGN) {
-                    return "unsigned long";
-                } else {
-                    return "long";
-                }
+	    case TNF_CONSTYPE:
+	        if(expr->expr_type == ASN_BASIC_REAL) {
+		    return "double";
+		} else if(asn1c_type_fits_long(arg, expr) == FL_FITS_UNSIGN) {
+		    return "unsigned long";
+		} else {
+		    return "long";
+	      }
             case TNF_CTYPE:
             case TNF_RSAFE:
                 if(expr->expr_type == ASN_BASIC_REAL) {
@@ -503,6 +503,7 @@ asn1c_type_fits_long(arg_t *arg, asn1p_expr_t *expr) {
        && right.type == ARE_MAX) {
         return FL_FITS_UNSIGN;
     }
+
     if(left.type == ARE_VALUE
 		&& left.value >= 0
 	&& right.type == ARE_VALUE
@@ -515,6 +516,7 @@ asn1c_type_fits_long(arg_t *arg, asn1p_expr_t *expr) {
 	if(left.type == ARE_VALUE
 			&& (left.value < LEFTMIN || left.value > RIGHTMAX))
 		return FL_NOTFIT;
+
 	if(right.type == ARE_VALUE
 			&& (right.value > RIGHTMAX || right.value < LEFTMIN))
 		return FL_NOTFIT;

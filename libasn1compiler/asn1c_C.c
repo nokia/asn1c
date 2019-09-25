@@ -357,34 +357,35 @@ asn1c_lang_C_type_SEQUENCE(arg_t *arg) {
 	}
 
 	TQ_FOR(v, &(expr->members), next) {
-		if(v->expr_type == A1TC_EXTENSIBLE)
-			if(comp_mode < 3) comp_mode++;
-		if(comp_mode == 1)
-			v->marker.flags |= EM_OMITABLE | EM_INDIRECT;
-		try_inline_default(arg, v, 1);
-        if(is_open_type(arg, v, ioc_tao.ioct ? &ioc_tao : 0)) {
+	  if(v->expr_type == A1TC_EXTENSIBLE)
+	    if(comp_mode < 3) comp_mode++;
+	  if(comp_mode == 1)
+	    v->marker.flags |= EM_OMITABLE | EM_INDIRECT;
+	  try_inline_default(arg, v, 1);
+	  if(is_open_type(arg, v, ioc_tao.ioct ? &ioc_tao : 0)) {
             arg_t tmp_arg = *arg;
             tmp_arg.embed++;
             INDENT(+1);
             tmp_arg.expr = v;
+
             const char *column_name = v->reference->components[1].name;
             if(asn1c_lang_C_OpenType(&tmp_arg, &ioc_tao, column_name)) {
                 return -1;
             }
             INDENT(-1);
             tmp_arg.embed--;
-        } else {
+	  } else {
             char ext_name[20];
-
+	    
             if((v->expr_type == ASN_CONSTR_SEQUENCE) &&
                (v->marker.flags & EM_OPTIONAL) &&
                (v->Identifier == NULL)) {
-                sprintf(ext_name, "ext%d", ext_num++);
-                v->Identifier = strdup(ext_name);
+	      sprintf(ext_name, "ext%d", ext_num++);
+	      v->Identifier = strdup(ext_name);
             }
 
             EMBED_WITH_IOCT(v, ioc_tao);
-        }
+	  }
 	}
 
 	PCTX_DEF;
@@ -462,6 +463,7 @@ asn1c_lang_C_type_SEQUENCE_def(arg_t *arg, asn1c_ioc_table_and_objset_t *opt_ioc
 		elements = 0;
 		roms_count = 0;
 		aoms_count = 0;
+
 		INDENTED(TQ_FOR(v, &(expr->members), next) {
 			if(v->expr_type == A1TC_EXTENSIBLE) {
 				if((++comp_mode) == 1)
@@ -2630,7 +2632,6 @@ emit_member_type_selector(arg_t *arg, asn1p_expr_t *expr, asn1c_ioc_table_and_ob
         OUT("0");
         return -1;
     }
-
     assert(opt_ioc != NULL);
 
     asn1p_expr_t *constraining_memb = NULL;
@@ -2663,7 +2664,9 @@ emit_member_type_selector(arg_t *arg, asn1p_expr_t *expr, asn1c_ioc_table_and_ob
     const char *cfield = constraining_memb->reference->components[1].name;
 
     ssize_t constraining_column = -1;
-    for(size_t cn = 0; cn < opt_ioc->ioct->rows ? opt_ioc->ioct->row[0]->columns : 0;
+
+    // ?? rows columns mismatch 
+    for(size_t cn = 0; cn < (opt_ioc->ioct->rows ? opt_ioc->ioct->row[0]->columns : 0);
         cn++) {
         if(strcmp(cfield, opt_ioc->ioct->row[0]->column[cn].field->Identifier)
            == 0) {
@@ -2715,75 +2718,241 @@ emit_member_type_selector(arg_t *arg, asn1p_expr_t *expr, asn1c_ioc_table_and_ob
         FATAL("Can not find referenced object class column %s\n", for_field);
         return -1;
     }
+    
+    int hasDuplicatedVariable = 0;
 
-    REDIR(OT_CODE);
-    OUT("static asn_type_selector_result_t\n");
-    OUT("select_%s_", c_name(arg).compound_name);
-    OUT("%s_type(const asn_TYPE_descriptor_t *parent_type, const void *parent_sptr) {\n", MKID(expr));
-    INDENT(+1);
+    // First check that this is a type.
+    // A CHOICE of type is a set of all alternatives type.
+    // There is no duplicate.
+    if (expr->reference->components[1].lex_type == RLT_AmpUppercase) {
+      asn1p_ioc_table_t *iocTable = opt_ioc->ioct;
+      
+      for (int i = 0; i < (iocTable->rows - 1); i++) {
+	asn1p_ioc_row_t* rowBase = iocTable->row[i];
+	if (rowBase->column[for_column].value == NULL) {
+	  continue;
+	} else {
+	  char* typeNameBase = rowBase->column[for_column].value->Identifier;
+	  for (int j = i + 1; j < iocTable->rows; j++) {
+	    asn1p_ioc_row_t* rowCheck = iocTable->row[j];
 
-    OUT("asn_type_selector_result_t result = {0, 0};\n");
-    OUT("const asn_ioc_set_t *itable = asn_IOS_%s_%d;\n", MKID(opt_ioc->objset),
+	    if (rowCheck->column[for_column].value == NULL) {
+	      continue;
+	    } else {
+	      char* typeNameCheck = rowCheck->column[for_column].value->Identifier;
+
+	      if (strcmp(typeNameBase, typeNameCheck) == 0) {
+		hasDuplicatedVariable = 1;
+		break;
+	      }
+	    }
+	  }
+        }
+
+	if (hasDuplicatedVariable != 0) {
+	  // Exit from the external for loop.
+	  break;
+	}
+      }
+    }
+
+
+    if (hasDuplicatedVariable != 0) {
+      // First get the number of indexes.
+      int indexCount = 0;
+      asn1p_ioc_table_t *iocTable = opt_ioc->ioct;
+	
+      for (int i = 0; i < iocTable->rows; i++) {
+	asn1p_ioc_row_t* rowBase = iocTable->row[i];
+	if (rowBase->column[for_column].value != NULL) {
+	  indexCount++;
+	}
+      }
+
+      // Build the alternatives types of the CHOICE.
+      arg_t new_arg = *arg;
+      new_arg.expr = expr;
+
+      asn1p_expr_t *open_type_choice =
+        asn1p_expr_new(new_arg.expr->_lineno, new_arg.expr->module);
+      
+      open_type_choice->Identifier = strdup(new_arg.expr->Identifier);
+      open_type_choice->meta_type = AMT_TYPE;
+      open_type_choice->expr_type = ASN_CONSTR_OPEN_TYPE;
+      open_type_choice->_type_unique_index = new_arg.expr->_type_unique_index;
+      open_type_choice->parent_expr = new_arg.expr->parent_expr;
+      new_arg.expr = open_type_choice;
+	
+      for(size_t row = 0; row < opt_ioc->ioct->rows; row++) {
+	struct asn1p_ioc_cell_s *cell =
+	  &opt_ioc->ioct->row[row]->column[for_column];
+	  
+	if(!cell->value) continue;
+	  
+	if(asn1p_lookup_child(open_type_choice, cell->value->Identifier))
+	  continue;
+	  
+	asn1p_expr_t *m = asn1p_expr_clone(cell->value, 0);
+	asn1p_expr_add(open_type_choice, m);
+      }
+	
+      REDIR(OT_CODE);
+      OUT("static asn_type_selector_result_t\n");
+      OUT("select_%s_", c_name(arg).compound_name);
+      OUT("%s_type(const asn_TYPE_descriptor_t *parent_type, const void *parent_sptr) {\n", MKID(expr));
+      INDENT(+1);
+
+      OUT("asn_type_selector_result_t result = {0, 0};\n");
+      OUT("const asn_ioc_set_t *itable = asn_IOS_%s_%d;\n", MKID(opt_ioc->objset),
         opt_ioc->objset->_type_unique_index);
-    OUT("size_t constraining_column = %zu; /* %s */\n", constraining_column, cfield);
-    OUT("size_t for_column = %zu; /* %s */\n", for_column, for_field);
-    OUT("size_t row, presence_index = 0;\n");
+      OUT("size_t constraining_column = %zu; /* %s */\n", constraining_column, cfield);
+      OUT("size_t for_column = %zu; /* %s */\n", for_column, for_field);
+      OUT("size_t row, presence_index = 0;\n");
 
-    const char *tname = asn1c_type_name(arg, constraining_memb, TNF_SAFE);
-    if(constraining_memb->marker.flags & EM_INDIRECT) {
+      const char *tname = asn1c_type_name(arg, constraining_memb, TNF_SAFE);
+      if(constraining_memb->marker.flags & EM_INDIRECT) {
         OUT("const void *memb_ptr = *(const void **)");
         OUT("((const char *)parent_sptr + offsetof(%s", c_name(arg).full_name);
         OUT(", %s));", MKID_safe(constraining_memb));
         OUT("if(!memb_ptr) return result;\n");
         OUT("\n");
-    }
+      }
 
-    switch(asn1c_type_fits_long(arg, constraining_memb)) {
-    case FL_NOTFIT:
+      switch(asn1c_type_fits_long(arg, constraining_memb)) {
+      case FL_NOTFIT:
         OUT("const %s_t *constraining_value = (const %s_t *)", tname, tname);
         break;
-    case FL_PRESUMED:
-    case FL_FITS_SIGNED:
+      case FL_PRESUMED:
+      case FL_FITS_SIGNED:
         OUT("const long *constraining_value = (const long *)");
         break;
-    case FL_FITS_UNSIGN:
+      case FL_FITS_UNSIGN:
         OUT("const unsigned long *constraining_value = (const unsigned long *)");
         break;
-    }
-    if(constraining_memb->marker.flags & EM_INDIRECT) {
+      }
+      if(constraining_memb->marker.flags & EM_INDIRECT) {
         OUT("memb_ptr;\n");
-    } else {
+      } else {
         OUT("((const char *)parent_sptr + offsetof(%s", c_name(arg).full_name);
         OUT(", %s));\n", MKID_safe(constraining_memb));
+      }
+
+      OUT("const int indexToPresence[%d] = {\n", indexCount + 1);
+      INDENT(1);
+      OUT("%s,\n", c_presence_name(&new_arg, 0));
+
+      for (int i = 0; i < iocTable->rows; i++) {
+	asn1p_ioc_row_t* rowBase = iocTable->row[i];
+	if (rowBase->column[for_column].value != NULL) {
+	  if (i != 0) {
+	    OUT(",\n");
+	  }
+	  OUT("%s",  c_presence_name(&new_arg, rowBase->column[for_column].value));
+	}
+      }
+
+      OUT("\n");
+      INDENT(-1);
+      OUT("};\n");
+      OUT("\n");
+      // Clean it.
+      asn1p_expr_free(new_arg.expr);
+
+      OUT("for(row=0; row < itable->rows_count; row++) {\n");
+      OUT("    const asn_ioc_cell_t *constraining_cell = &itable->rows[row * itable->columns_count + constraining_column];\n");
+      OUT("    const asn_ioc_cell_t *type_cell = &itable->rows[row * itable->columns_count + for_column];\n");
+      OUT("\n");
+      OUT("    if(type_cell->cell_kind == aioc__undefined)\n");
+      OUT("        continue;\n");
+      OUT("\n");
+      OUT("    presence_index++;\n");
+      OUT("    if(constraining_cell->type_descriptor->op->compare_struct(constraining_cell->type_descriptor, constraining_value, constraining_cell->value_sptr) == 0) {\n");
+      OUT("        result.type_descriptor = type_cell->type_descriptor;\n");
+      OUT("        result.presence_index = indexToPresence[presence_index];\n");
+      OUT("        break;\n");
+      OUT("    }\n");
+      OUT("}\n");
+
+      OUT("\n");
+      OUT("return result;\n");
+      INDENT(-1);
+      OUT("}\n");
+      OUT("\n");
+
+      REDIR(save_target);
+      OUT("select_%s_", c_name(arg).compound_name);
+      OUT("%s_type", MKID(expr));
+    } else {
+      // Either it is not a variable, or there is no duplicate types.
+      REDIR(OT_CODE);
+      OUT("static asn_type_selector_result_t\n");
+      OUT("select_%s_", c_name(arg).compound_name);
+      OUT("%s_type(const asn_TYPE_descriptor_t *parent_type, const void *parent_sptr) {\n", MKID(expr));
+      INDENT(+1);
+
+      OUT("asn_type_selector_result_t result = {0, 0};\n");
+      OUT("const asn_ioc_set_t *itable = asn_IOS_%s_%d;\n", MKID(opt_ioc->objset),
+        opt_ioc->objset->_type_unique_index);
+      OUT("size_t constraining_column = %zu; /* %s */\n", constraining_column, cfield);
+      OUT("size_t for_column = %zu; /* %s */\n", for_column, for_field);
+      OUT("size_t row, presence_index = 0;\n");
+
+      const char *tname = asn1c_type_name(arg, constraining_memb, TNF_SAFE);
+      if(constraining_memb->marker.flags & EM_INDIRECT) {
+        OUT("const void *memb_ptr = *(const void **)");
+        OUT("((const char *)parent_sptr + offsetof(%s", c_name(arg).full_name);
+        OUT(", %s));", MKID_safe(constraining_memb));
+        OUT("if(!memb_ptr) return result;\n");
+        OUT("\n");
+      }
+
+      switch(asn1c_type_fits_long(arg, constraining_memb)) {
+      case FL_NOTFIT:
+        OUT("const %s_t *constraining_value = (const %s_t *)", tname, tname);
+        break;
+      case FL_PRESUMED:
+      case FL_FITS_SIGNED:
+        OUT("const long *constraining_value = (const long *)");
+        break;
+      case FL_FITS_UNSIGN:
+        OUT("const unsigned long *constraining_value = (const unsigned long *)");
+        break;
+      }
+      if(constraining_memb->marker.flags & EM_INDIRECT) {
+        OUT("memb_ptr;\n");
+      } else {
+        OUT("((const char *)parent_sptr + offsetof(%s", c_name(arg).full_name);
+        OUT(", %s));\n", MKID_safe(constraining_memb));
+      }
+      OUT("\n");
+
+      OUT("for(row=0; row < itable->rows_count; row++) {\n");
+      OUT("    const asn_ioc_cell_t *constraining_cell = &itable->rows[row * itable->columns_count + constraining_column];\n");
+      OUT("    const asn_ioc_cell_t *type_cell = &itable->rows[row * itable->columns_count + for_column];\n");
+      OUT("\n");
+      OUT("    if(type_cell->cell_kind == aioc__undefined)\n");
+      OUT("        continue;\n");
+      OUT("\n");
+      OUT("    presence_index++;\n");
+      OUT("    if(constraining_cell->type_descriptor->op->compare_struct(constraining_cell->type_descriptor, constraining_value, constraining_cell->value_sptr) == 0) {\n");
+      OUT("        result.type_descriptor = type_cell->type_descriptor;\n");
+      OUT("        result.presence_index = presence_index;\n");
+      OUT("        break;\n");
+      OUT("    }\n");
+      OUT("}\n");
+
+
+      OUT("\n");
+      OUT("return result;\n");
+      INDENT(-1);
+      OUT("}\n");
+      OUT("\n");
+
+      REDIR(save_target);
+      OUT("select_%s_", c_name(arg).compound_name);
+      OUT("%s_type", MKID(expr));
     }
-    OUT("\n");
-
-    OUT("for(row=0; row < itable->rows_count; row++) {\n");
-    OUT("    const asn_ioc_cell_t *constraining_cell = &itable->rows[row * itable->columns_count + constraining_column];\n");
-    OUT("    const asn_ioc_cell_t *type_cell = &itable->rows[row * itable->columns_count + for_column];\n");
-    OUT("\n");
-    OUT("    if(type_cell->cell_kind == aioc__undefined)\n");
-    OUT("        continue;\n");
-    OUT("\n");
-    OUT("    presence_index++;\n");
-    OUT("    if(constraining_cell->type_descriptor->op->compare_struct(constraining_cell->type_descriptor, constraining_value, constraining_cell->value_sptr) == 0) {\n");
-    OUT("        result.type_descriptor = type_cell->type_descriptor;\n");
-    OUT("        result.presence_index = presence_index;\n");
-    OUT("        break;\n");
-    OUT("    }\n");
-    OUT("}\n");
-
-
-    OUT("\n");
-    OUT("return result;\n");
-    INDENT(-1);
-    OUT("}\n");
-    OUT("\n");
-
-    REDIR(save_target);
-    OUT("select_%s_", c_name(arg).compound_name);
-    OUT("%s_type", MKID(expr));
-
+    
     return 0;
 }
 

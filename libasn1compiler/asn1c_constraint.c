@@ -169,7 +169,7 @@ asn1c_emit_constraint_checking_code(arg_t *arg) {
 	}
 
 	/*
-	 * Here is an if() {} else {} consrtaint checking code.
+	 * Here is an if() {} else {} constraint checking code.
 	 */
 	int got_something = 0;
     int value_unused = 0;

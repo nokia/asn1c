@@ -223,6 +223,7 @@ asn1constraint_resolve(arg_t *arg, asn1p_constraint_t *ct, asn1p_expr_type_e ety
     /*
      * Proceed recursively.
      */
+
     for(el = 0; el < ct->el_count; el++) {
         ret = asn1constraint_resolve(arg, ct->elements[el], etype,
                                      effective_type);

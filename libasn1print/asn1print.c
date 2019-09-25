@@ -340,7 +340,6 @@ asn1print_constraint(const asn1p_constraint_t *ct, enum asn1print_flags flags) {
 	int perhaps_subconstraints = 0;
 
 	if(ct == 0) return 0;
-
 	switch(ct->type) {
 	case ACT_EL_TYPE:
 		asn1print_value(ct->containedSubtype, flags);

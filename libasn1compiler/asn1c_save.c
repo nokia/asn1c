@@ -502,8 +502,10 @@ asn1c_save_streams(arg_t *arg, asn1c_dep_chainset *deps, const char *destdir,
 		return -1;
 	}
 
+	
 	filename = strdup(asn1c_make_identifier(AMI_MASK_ONLY_SPACES | AMI_USE_PREFIX,
 						expr, (char*)0));
+	
 	fp_c = asn1c_open_file(destdir, filename, ".c", &tmpname_c);
     if(fp_c == NULL) {
         return -1;

@@ -159,6 +159,22 @@ int asn1p_itoa_s(char *buf, size_t size, asn1c_integer_t v) {
         assert(ret > 0 && (size_t)ret < sizeof(tmp_buf));
         return -1;
     }
+
+    /* Avoid warning with positive values > INT64_MAX, 
+       and mark them as an unsigned value */
+    if (sign == 0) {
+      const char* max_int64 = "9223372036854775807";
+
+      tmp_buf[ret] = 0;
+      
+      int maxlength = strlen(max_int64);
+      int strlength = strlen(tmp_buf);
+			     
+      if ((strlength > maxlength) || ((strlength == maxlength) && (strcmp(tmp_buf, max_int64) > 0 ))) {
+	tmp_buf[ret++] = 'U';
+      }
+    }
+    
     memcpy(buf, tmp_buf, ret);
     buf[ret] = '\0';
     return ret;
