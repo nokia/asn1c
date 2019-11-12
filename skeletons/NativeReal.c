@@ -178,7 +178,7 @@ NativeReal_encode_der(const asn_TYPE_descriptor_t *td, const void *sptr,
                       int tag_mode, ber_tlv_tag_t tag,
                       asn_app_consume_bytes_f *cb, void *app_key) {
     double d = NativeReal__get_double(td, sptr);
-    asn_enc_rval_t erval;
+    asn_enc_rval_t erval = {0,0,0};
 	REAL_t tmp;
 
 	/* Prepare a temporary clean structure */
@@ -244,7 +244,7 @@ NativeReal_encode_uper(const asn_TYPE_descriptor_t *td,
                        const asn_per_constraints_t *constraints,
                        const void *sptr, asn_per_outp_t *po) {
     double d = NativeReal__get_double(td, sptr);
-	asn_enc_rval_t erval;
+	asn_enc_rval_t erval = {0,0,0};
 	REAL_t tmp;
 
 	(void)constraints;
@@ -310,7 +310,7 @@ NativeReal_encode_aper(const asn_TYPE_descriptor_t *td,
                        const asn_per_constraints_t *constraints,
                        const void *sptr, asn_per_outp_t *po) {
 	double Dbl = *(const double *)sptr;
-	asn_enc_rval_t erval;
+	asn_enc_rval_t erval = {0,0,0};
 	REAL_t tmp;
 
 	(void)constraints;
@@ -589,13 +589,13 @@ asn_enc_rval_t
 NativeReal_encode_xer(const asn_TYPE_descriptor_t *td, const void *sptr,
                       int ilevel, enum xer_encoder_flags_e flags,
                       asn_app_consume_bytes_f *cb, void *app_key) {
-    double d = NativeReal__get_double(td, sptr);
-	asn_enc_rval_t er;
+	double d = NativeReal__get_double(td, sptr);
+	asn_enc_rval_t er = {0,0,0};
 
 	(void)ilevel;
 
-    er.encoded = REAL__dump(d, flags & XER_F_CANONICAL, cb, app_key);
-    if(er.encoded < 0) ASN__ENCODE_FAILED;
+	er.encoded = REAL__dump(d, flags & XER_F_CANONICAL, cb, app_key);
+	if(er.encoded < 0) ASN__ENCODE_FAILED;
 
 	ASN__ENCODED_OK(er);
 }

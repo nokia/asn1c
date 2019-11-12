@@ -376,8 +376,8 @@ asn_enc_rval_t
 REAL_encode_xer(const asn_TYPE_descriptor_t *td, const void *sptr, int ilevel,
                 enum xer_encoder_flags_e flags, asn_app_consume_bytes_f *cb,
                 void *app_key) {
-    const REAL_t *st = (const REAL_t *)sptr;
-	asn_enc_rval_t er;
+	const REAL_t *st = (const REAL_t *)sptr;
+	asn_enc_rval_t er = {0,0,0};
 	double d;
 
 	(void)ilevel;
@@ -854,7 +854,7 @@ REAL_encode_oer(const asn_TYPE_descriptor_t *td,
                 const asn_oer_constraints_t *constraints, const void *sptr,
                 asn_app_consume_bytes_f *cb, void *app_key) {
     const REAL_t *st = sptr;
-    asn_enc_rval_t er;
+    asn_enc_rval_t er = {0,0,0};
     ssize_t len_len;
 
     if(!st || !st->buf || !td)

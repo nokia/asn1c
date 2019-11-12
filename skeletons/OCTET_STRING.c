@@ -539,7 +539,7 @@ asn_enc_rval_t
 OCTET_STRING_encode_der(const asn_TYPE_descriptor_t *td, const void *sptr,
                         int tag_mode, ber_tlv_tag_t tag,
                         asn_app_consume_bytes_f *cb, void *app_key) {
-    asn_enc_rval_t er;
+    asn_enc_rval_t er = { 0, 0, 0 };
 	const asn_OCTET_STRING_specifics_t *specs = td->specifics
 				? (const asn_OCTET_STRING_specifics_t *)td->specifics
 				: &asn_SPC_OCTET_STRING_specs;
@@ -603,7 +603,7 @@ OCTET_STRING_encode_xer(const asn_TYPE_descriptor_t *td, const void *sptr,
                         asn_app_consume_bytes_f *cb, void *app_key) {
     const char * const h2c = "0123456789ABCDEF";
 	const OCTET_STRING_t *st = (const OCTET_STRING_t *)sptr;
-	asn_enc_rval_t er;
+	asn_enc_rval_t er = { 0, 0, 0 };
 	char scratch[16 * 3 + 4];
 	char *p = scratch;
 	uint8_t *buf;
@@ -753,8 +753,8 @@ asn_enc_rval_t
 OCTET_STRING_encode_xer_utf8(const asn_TYPE_descriptor_t *td, const void *sptr,
                              int ilevel, enum xer_encoder_flags_e flags,
                              asn_app_consume_bytes_f *cb, void *app_key) {
-    const OCTET_STRING_t *st = (const OCTET_STRING_t *)sptr;
-	asn_enc_rval_t er;
+	const OCTET_STRING_t *st = (const OCTET_STRING_t *)sptr;
+	asn_enc_rval_t er = { 0, 0, 0 };
 	uint8_t *buf, *end;
 	uint8_t *ss;	/* Sequence start */
 	ssize_t encoded_len = 0;

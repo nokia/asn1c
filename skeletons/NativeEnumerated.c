@@ -66,7 +66,7 @@ NativeEnumerated_encode_xer(const asn_TYPE_descriptor_t *td, const void *sptr,
                             asn_app_consume_bytes_f *cb, void *app_key) {
     const asn_INTEGER_specifics_t *specs =
         (const asn_INTEGER_specifics_t *)td->specifics;
-    asn_enc_rval_t er;
+    asn_enc_rval_t er = {0,0,0};
     const long *native = (const long *)sptr;
     const asn_INTEGER_enum_map_t *el;
 
@@ -161,9 +161,9 @@ asn_enc_rval_t
 NativeEnumerated_encode_uper(const asn_TYPE_descriptor_t *td,
                              const asn_per_constraints_t *constraints,
                              const void *sptr, asn_per_outp_t *po) {
-    const asn_INTEGER_specifics_t *specs =
+	const asn_INTEGER_specifics_t *specs =
         (const asn_INTEGER_specifics_t *)td->specifics;
-    asn_enc_rval_t er;
+	asn_enc_rval_t er = {0,0,0};
 	long native, value;
 	const asn_per_constraint_t *ct;
 	int inext = 0;
@@ -300,7 +300,7 @@ NativeEnumerated_encode_aper(const asn_TYPE_descriptor_t *td,
                              const asn_per_constraints_t *constraints,
                              const void *sptr, asn_per_outp_t *po) {
 	const asn_INTEGER_specifics_t *specs = (const asn_INTEGER_specifics_t *)td->specifics;
-	asn_enc_rval_t er;
+	asn_enc_rval_t er = {0,0,0};
 	long native, value;
 	const asn_per_constraint_t *ct;
 	int inext = 0;

@@ -17,6 +17,7 @@ asn__format_to_callback(int (*cb)(const void *, size_t, void *key), void *key,
         if(wrote < (ssize_t)buf_size) {
             if(wrote < 0) {
                 if(buf != scratch) FREEMEM(buf);
+		va_end(args);
                 return -1;
             }
             break;

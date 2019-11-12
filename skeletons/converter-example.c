@@ -442,7 +442,7 @@ main(int ac, char *av[]) {
        * Process all files in turn.
        */
       for(ac_i = (isyntax == ATS_RANDOM) ? -1 : 0; ac_i < ac; ac_i++) {
-        asn_enc_rval_t erv;
+        asn_enc_rval_t erv = {0,0,0};
         void *structure;    /* Decoded structure */
         FILE *file;
         char *name;

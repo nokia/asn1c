@@ -200,7 +200,7 @@ BMPString_encode_xer(const asn_TYPE_descriptor_t *td, const void *sptr,
                      int ilevel, enum xer_encoder_flags_e flags,
                      asn_app_consume_bytes_f *cb, void *app_key) {
     const BMPString_t *st = (const BMPString_t *)sptr;
-	asn_enc_rval_t er;
+	asn_enc_rval_t er = {0,0,0};
 
 	(void)ilevel;
 	(void)flags;
